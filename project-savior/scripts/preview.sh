@@ -14,7 +14,7 @@ out="${2:-$(dirname "$deck")/preview}"; mkdir -p "$out"; out="$(cd "$out" && pwd
 name="$(basename "${deck%.*}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 
-profile="${HANDOVER_LO_PROFILE:-${TMPDIR:-/tmp}/project-handover-lo-profile}"
+profile="${HANDOVER_LO_PROFILE:-${TMPDIR:-/tmp}/project-savior-lo-profile}"
 mkdir -p "$profile/user/fonts"
 for f in "/System/Library/Fonts/STHeiti Medium.ttc" "/System/Library/Fonts/STHeiti Light.ttc" \
          "/System/Library/Fonts/Menlo.ttc"; do

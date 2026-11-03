@@ -1,5 +1,5 @@
 ---
-name: project-handover
+name: project-savior
 description: 指定一個或多個 repo（本機路徑、本機專案名、或 git URL），深入分析程式碼與 git 歷史，整理成交接／教學文件 handover.md、技術目錄 tech-catalog.md（專案用到的每項技術與要點），並產出 16:9 的 .pptx 簡報（含架構圖、流程圖、講者備註）。凡是使用者提到專案交接、交接簡報、教學簡報、onboarding、新人導讀、「幫我介紹／整理這個 repo」、「把手上專案做成 ppt」、「這專案用了哪些技術」、技術盤點、knowledge transfer、離職或轉調前整理專案，即使沒說「skill」或「ppt」也要使用。Use for any request to explain, document, or hand over a codebase as slides or a handover doc.
 ---
 
