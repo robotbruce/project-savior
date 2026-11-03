@@ -1,0 +1,380 @@
+{
+ "title": "Bookstore 專案交接",
+ "footer": "Bookstore 交接｜2026-11",
+ "slides": [
+  {
+   "type": "title",
+   "title": "Bookstore 專案交接與教學",
+   "subtitle": "bookstore-recsys · 書籍推薦服務",
+   "author": "Alex Chen",
+   "date": "2026-11-02",
+   "notes": "開場：說明本次目的是讓接手者兩週內能獨立維運與開發。"
+  },
+  {
+   "type": "agenda",
+   "items": [
+    {
+     "text": "專案概觀",
+     "desc": "要解決什麼問題、誰在用"
+    },
+    "系統架構",
+    "核心流程",
+    {
+     "text": "開發與部署",
+     "desc": "本機啟動、測試、上線"
+    },
+    "已知問題與待辦",
+    "交接清單"
+   ]
+  },
+  {
+   "type": "section",
+   "number": 1,
+   "title": "專案概觀",
+   "subtitle": "為什麼有這個服務、它在整體產品中的位置"
+  },
+  {
+   "type": "stats",
+   "title": "專案一覽",
+   "items": [
+    {
+     "value": "7",
+     "label": "Python 模組"
+    },
+    {
+     "value": "318",
+     "label": "程式碼行數"
+    },
+    {
+     "value": "2",
+     "label": "下游服務（搜尋 / 排序）"
+    },
+    {
+     "value": "v0",
+     "label": "目前版本"
+    }
+   ],
+   "bullets": [
+    "**FastAPI** 服務，提供 `/answer` 與 `/healthz`",
+    "設定檔：`bookstore/settings/dev.toml`"
+   ]
+  },
+  {
+   "type": "bullets",
+   "title": "這個服務在做什麼",
+   "subtitle": "一句話：把使用者的讀者問題分派給兩個模型再合併答案",
+   "bullets": [
+    "接收自然語言讀者問題",
+    "  同時呼叫 **Search**（找候選書）與 **Ranker**（排出推薦順序）",
+    "  以 `combine.py` 合併兩邊結果",
+    "回傳結構化答案與說明文字",
+    "健康檢查 `/healthz` 給 k8s probe 使用"
+   ],
+   "callout": "接手第一件事：先讀 README 與 app.py，約 30 分鐘即可掌握全貌。"
+  },
+  {
+   "type": "architecture",
+   "title": "系統架構",
+   "layers": [
+    {
+     "name": "呼叫端",
+     "items": [
+      "Bookstore 前端",
+      {
+       "name": "內部工具",
+       "desc": "測試 / playground"
+      }
+     ]
+    },
+    {
+     "name": "服務層",
+     "items": [
+      {
+       "name": "bookstore.app",
+       "desc": "FastAPI 路由",
+       "highlight": true
+      },
+      {
+       "name": "downstream.py",
+       "desc": "httpx 非同步 fan-out"
+      },
+      {
+       "name": "combine.py",
+       "desc": "結果合併"
+      }
+     ]
+    },
+    {
+     "name": "模型層",
+     "items": [
+      {
+       "name": "搜尋服務",
+       "desc": "模型服務 :9000"
+      },
+      {
+       "name": "排序服務",
+       "desc": "模型服務 :9000"
+      }
+     ]
+    }
+   ],
+   "callout": "所有下游位址都由 BOOKSTORE_CONFIG 指到的 TOML 決定。"
+  },
+  {
+   "type": "diagram",
+   "title": "系統架構（diagram 範例）",
+   "cols": 4,
+   "rows": 3,
+   "groups": [
+    {
+     "label": "Bookstore",
+     "cells": [
+      1,
+      0,
+      3,
+      3
+     ]
+    }
+   ],
+   "nodes": [
+    {
+     "id": "fe",
+     "label": "Bookstore 前端",
+     "desc": "呼叫端（推測）",
+     "col": 0,
+     "row": 1,
+     "kind": "client"
+    },
+    {
+     "id": "app",
+     "label": "bookstore.app",
+     "desc": "FastAPI /answer",
+     "col": 1,
+     "row": 1,
+     "kind": "module",
+     "highlight": true
+    },
+    {
+     "id": "ds",
+     "label": "downstream.py",
+     "desc": "httpx 非同步 fan-out",
+     "col": 2,
+     "row": 0,
+     "kind": "service"
+    },
+    {
+     "id": "cb",
+     "label": "combine.py",
+     "desc": "合併結果",
+     "col": 2,
+     "row": 2,
+     "kind": "service"
+    },
+    {
+     "id": "search",
+     "label": "搜尋服務",
+     "desc": "模型服務 :9000",
+     "col": 3,
+     "row": 0,
+     "kind": "external"
+    },
+    {
+     "id": "ranker",
+     "label": "排序服務",
+     "desc": "模型服務 :9000",
+     "col": 3,
+     "row": 1,
+     "kind": "external"
+    },
+    {
+     "id": "cfg",
+     "label": "settings/dev.toml",
+     "desc": "BOOKSTORE_CONFIG",
+     "col": 1,
+     "row": 2,
+     "kind": "storage"
+    }
+   ],
+   "edges": [
+    {
+     "from": "fe",
+     "to": "app",
+     "label": "POST"
+    },
+    {
+     "from": "app",
+     "to": "ds",
+     "label": "①"
+    },
+    {
+     "from": "ds",
+     "to": "search"
+    },
+    {
+     "from": "ds",
+     "to": "ranker"
+    },
+    {
+     "from": "app",
+     "to": "cb",
+     "label": "②"
+    },
+    {
+     "from": "cfg",
+     "to": "app",
+     "style": "dashed"
+    }
+   ],
+   "notes": "diagram 頁型範例：分組框、各種 kind、帶標籤與虛線的箭頭。"
+  },
+  {
+   "type": "flow",
+   "title": "一次 /answer 請求的流程",
+   "steps": [
+    {
+     "label": "1. 收到請求",
+     "desc": "Pydantic 驗證 AnswerRequest"
+    },
+    {
+     "label": "2. Fan-out",
+     "desc": "並行呼叫兩個服務"
+    },
+    {
+     "label": "3. 合併",
+     "desc": "combine() 處理缺值與衝突",
+     "highlight": true
+    },
+    {
+     "label": "4. 回應",
+     "desc": "回傳 AnswerResponse"
+    }
+   ],
+   "notes": [
+    "Fan-out：逾時 / 重試設定在 config。"
+   ]
+  },
+  {
+   "type": "two_column",
+   "title": "本機開發 vs. 部署",
+   "left": {
+    "heading": "本機開發",
+    "bullets": [
+     "`uv sync` 安裝相依",
+     "`uv run uvicorn bookstore.app:app --reload`",
+     "`uv run pytest`"
+    ]
+   },
+   "right": {
+    "heading": "部署 (k8s)",
+    "bullets": [
+     "映像檔建置：待補",
+     "Helm / manifest：**待確認**",
+     "環境變數：`BOOKSTORE_CONFIG`"
+    ]
+   }
+  },
+  {
+   "type": "code",
+   "title": "核心程式片段",
+   "code": "@app.post(\"/answer\")\nasync def answer(req: AnswerRequest) -> AnswerResponse:\n    search, ranker = await asyncio.gather(\n        call_search(req.question), call_ranker(req.question))\n    return combine(search, ranker)",
+   "caption": "bookstore/app.py — 所有請求都從這裡進來"
+  },
+  {
+   "type": "table",
+   "title": "設定與環境變數",
+   "columns": [
+    "名稱",
+    "用途",
+    "來源",
+    "備註"
+   ],
+   "rows": [
+    [
+     "BOOKSTORE_CONFIG",
+     "設定檔路徑",
+     "env",
+     "預設 settings/dev.toml"
+    ],
+    [
+     "search.url",
+     "搜尋服務位址",
+     "TOML",
+     "dev 指向測試主機"
+    ],
+    [
+     "ranker.url",
+     "排序服務位址",
+     "TOML",
+     ""
+    ],
+    [
+     "timeout_s",
+     "下游逾時秒數",
+     "TOML",
+     "**待確認** 正式值"
+    ]
+   ]
+  },
+  {
+   "type": "timeline",
+   "title": "專案時程",
+   "milestones": [
+    {
+     "date": "2026-09",
+     "label": "PoC",
+     "desc": "推薦模型驗證"
+    },
+    {
+     "date": "2026-11",
+     "label": "v0 服務",
+     "desc": "本 repo 首次提交"
+    },
+    {
+     "date": "2026-12",
+     "label": "上線 k8s",
+     "desc": "待排程",
+     "status": "todo"
+    },
+    {
+     "date": "2027-Q1",
+     "label": "正式流量",
+     "status": "todo"
+    }
+   ]
+  },
+  {
+   "type": "cards",
+   "title": "已知問題與待辦",
+   "cards": [
+    {
+     "title": "缺少部署設定",
+     "tag": "高",
+     "highlight": true,
+     "body": "repo 內尚無 Dockerfile / Helm chart，需要與 平台團隊的部署範本 對齊。"
+    },
+    {
+     "title": "測試覆蓋",
+     "tag": "中",
+     "body": [
+      "僅有 test_app.py",
+      "下游以 mock 處理"
+     ]
+    },
+    {
+     "title": "監控",
+     "tag": "低",
+     "body": "尚未接 metrics / log 平台"
+    }
+   ]
+  },
+  {
+   "type": "closing",
+   "title": "交接清單 & Q&A",
+   "bullets": [
+    "GitHub acme/bookstore-recsys 權限",
+    "模型服務主機權限",
+    "窗口：Alex Chen（alex.chen@example.com）"
+   ]
+  }
+ ]
+}
